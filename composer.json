@@ -1,0 +1,29 @@
+{
+	"name" : "onetoweb/lightspeed",
+	"description" : "Lightspeed API Client",
+	"keywords" : [
+		"api",
+		"php",
+		"lightspeed"
+	],
+	"type" : "library",
+	"homepage" : "https://github.com/onetoweb/lightspeed",
+	"license" : "MIT",
+	"authors" : [{
+			"name" : "Jonathan van 't Ende",
+			"email" : "jvantende@onetoweb.nl"
+		}
+	],
+	"require" : {
+		"php" : ">=7.1.0",
+		"guzzlehttp/guzzle": "^6.0 || ^7.0"
+	},
+	"require-dev" : {
+		"symfony/error-handler" : "^5.1"
+	},
+	"autoload" : {
+		"psr-4" : {
+			"Onetoweb\\Lightspeed\\" : "src/"
+		}
+	}
+}
