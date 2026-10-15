@@ -272,13 +272,9 @@ class Client
             $accountEndpoint = "/API/Account/{$this->accountId}/$endpoint";
         }
         
-        dump($method);
-        
         if (!$method instanceof Method) {
             $method = Method::from($method);
         }
-        
-        dump($method);
         
         return $this->request($method, $accountEndpoint, $data, $query, $filepath, $filename);
     }
@@ -302,13 +298,9 @@ class Client
         string $filename = null
     ): array {
         
-        dump($method);
-        
         if (!$method instanceof Method) {
             $method = Method::from(Method);
         }
-        
-        dump($method);
         
         $options = [];
         
@@ -365,14 +357,6 @@ class Client
             $guzzleClient = new GuzzleClient([
                 'base_uri' => self::BASE_URL,
             ]);
-            
-            dump([
-                'method' => $method,
-                'endpoint' => self::BASE_URL . $endpoint,
-                'options' => $options
-                
-            ]);
-            exit;
             
             $response = $guzzleClient->request($method->value, $endpoint, $options);
             
