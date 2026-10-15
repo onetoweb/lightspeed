@@ -2,6 +2,7 @@
 
 namespace Onetoweb\Lightspeed;
 
+use Stringable;
 use DateTime;
 
 /**
@@ -10,33 +11,32 @@ use DateTime;
  * @author Jonathan van 't Ende <jvantende@onetoweb.nl>
  * @copyright Onetoweb B.V.
  */
-class Token
+class Token implements Stringable
 {
-    /**
-     * @var string
-     */
-    private $accessToken;
-    
-    /**
-     * @var string
-     */
-    private $refreshToken;
-    
-    /**
-     * @var DateTime
-     */
-    private $expires;
-    
     /**
      * @param string $accessToken
      * @param string $refreshToken
      * @param int $expireIn
      */
-    public function __construct(string $accessToken, string $refreshToken, DateTime $expires)
+    public function __construct(
+        
+        #[\SensitiveParameter]
+        private string $accessToken,
+        
+        #[\SensitiveParameter]
+        private string $refreshToken,
+        
+        private DateTime $expires
+    ) {
+        
+    }
+    
+    /**
+     * @return string
+     */
+    public function __toString(): string
     {
-        $this->accessToken = $accessToken;
-        $this->refreshToken = $refreshToken;
-        $this->expires = $expires;
+        return $this->accessToken;
     }
     
     /**
@@ -68,6 +68,6 @@ class Token
      */
     public function isExpired(): bool
     {
-        return new DateTime() > $this->expires;
+        return (bool) ($this->expires < new DateTime());
     }
 }

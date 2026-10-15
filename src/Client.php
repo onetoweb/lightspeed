@@ -7,8 +7,10 @@ use GuzzleHttp\RequestOptions;
 use GuzzleHttp\Exception\RequestException as GuzzleRequestException;
 use GuzzleHttp\Psr7\Utils;
 use Onetoweb\Lightspeed\Exception\{RequestException, TokenException, AccountException};
+use Onetoweb\Lightspeed\Config\Method;
 use Onetoweb\Lightspeed\Token;
 use DateTime;
+use Closure;
 
 /**
  * Lightspeed Api client.
@@ -18,65 +20,66 @@ use DateTime;
  */
 class Client
 {
-    const BASE_URL = 'https://api.lightspeedapp.com/';
+    /**
+     * Base url.
+     */
+    public const BASE_URL = 'https://api.lightspeedapp.com/';
     
-    const METHOD_GET = 'GET';
-    const METHOD_POST = 'POST';
-    const METHOD_PUT = 'PUT';
-    const METHOD_DELETE = 'DELETE';
+    /**
+     * Methods.
+     */
+    public const METHOD_GET = 'GET';
+    public const METHOD_POST = 'POST';
+    public const METHOD_PUT = 'PUT';
+    public const METHOD_DELETE = 'DELETE';
     
     /**
      * @var string
      */
-    private $clientId;
-    
-    /**
-     * @var string
-     */
-    private $clientSecret;
-    
-    /**
-     * @var Token
-     */
-    private $token;
-    
-    /**
-     * @var callable
-     */
-    private $updateTokenCallback;
-    
-    /**
-     * @var string
-     */
-    private $accountId;
+    private ?string $accountId = null;
     
     /**
      * @var array
      */
-    private $bucketLevel;
+    private ?array $bucketLevel = null;
     
     /**
-     * @var callable
+     * @var Token
      */
-    private $bucketLevelCallback;
+    private ?Token $token = null;
+    
+    /**
+     * @var Closure
+     */
+    private ?Closure $updateTokenCallback = null;
+    
+    /**
+     * @var Closure
+     */
+    private Closure $bucketLevelCallback;
     
     /**
      * @param string $clientId
      * @param string $clientSecret
      */
-    public function __construct(string $clientId, string $clientSecret)
-    {
-        $this->clientId = $clientId;
-        $this->clientSecret = $clientSecret;
+    public function __construct(
+        
+        #[\SensitiveParameter]
+        private string $clientId,
+        
+        #[\SensitiveParameter]
+        private string $clientSecret
+    ) {
+        
     }
     
     /**
      * @param array $scope
-     * @param string $state
-     *
+     * @param string|null $state
+     * 
      * @return string
      */
-    public function getAuthorizeLink(array $scope, string $state = null): string
+    public function getAuthorizeLink(array $scope, ?string $state = null): string
     {
         return "https://cloud.lightspeedapp.com/oauth/authorize.php?" . http_build_query([
             'response_type' => 'code',
@@ -88,7 +91,7 @@ class Client
     
     /**
      * @param Token $token
-     *
+     * 
      * @return void
      */
     public function setToken(Token $token): void
@@ -98,7 +101,7 @@ class Client
     
     /**
      * @param string $accountId
-     *
+     * 
      * @return void
      */
     public function setAccountId(string $accountId): void
@@ -107,11 +110,11 @@ class Client
     }
     
     /**
-     * @param callable $updateTokenCallback
-     *
+     * @param Closure $updateTokenCallback
+     * 
      * @return void
      */
-    public function setUpdateTokenCallback(callable $updateTokenCallback): void
+    public function setUpdateTokenCallback(Closure $updateTokenCallback): void
     {
         $this->updateTokenCallback = $updateTokenCallback;
     }
@@ -126,12 +129,12 @@ class Client
     
     /**
      * @param string $code
-     *
+     * 
      * @return void
      */
     public function requestAccessToken(string $code): void
     {
-        $accessToken = $this->request(self::METHOD_POST, '/oauth/access_token.php', [
+        $accessToken = $this->post('/oauth/access_token.php', [
             'client_id' => $this->clientId,
             'client_secret' => $this->clientSecret,
             'code' => $code,
@@ -143,7 +146,7 @@ class Client
     
     /**
      * @param array $accessToken
-     *
+     * 
      * @return void
      */
     private function updateToken(array $accessToken): void
@@ -171,7 +174,7 @@ class Client
      */
     private function refreshAccessToken(): void
     {
-        $accessToken = $this->request(self::METHOD_POST, '/oauth/access_token.php', [
+        $accessToken = $this->post('/oauth/access_token.php', [
             'refresh_token' => $this->token->getRefreshToken(),
             'client_id' => $this->clientId,
             'client_secret' => $this->clientSecret,
@@ -182,11 +185,11 @@ class Client
     }
     
     /**
-     * @param callable $bucketLevelCallback
-     *
+     * @param Closure $bucketLevelCallback
+     * 
      * @return void
      */
-    public function setBucketLevelCallback(callable $bucketLevelCallback): void
+    public function setBucketLevelCallback(Closure $bucketLevelCallback): void
     {
         $this->bucketLevelCallback = $bucketLevelCallback;
     }
@@ -200,17 +203,60 @@ class Client
     }
     
     /**
-     * @param string $method
+     * @param string $endpoint
+     * @param array $query = []
+     * 
+     * @return array
+     */
+    public function get(string $endpoint, array $query = []): array
+    {
+        return $this->request(Method::GET, $endpoint, [], $query);
+    }
+    
+    /**
+     * @param string $endpoint
+     * @param array $data = []
+     * 
+     * @return array
+     */
+    public function post(string $endpoint, array $data = []): array
+    {
+        return $this->request(Method::POST, $endpoint, $data);
+    }
+    
+    /**
+     * @param string $endpoint
+     * @param array $data = []
+     * 
+     * @return array
+     */
+    public function put(string $endpoint, array $data = []): array
+    {
+        return $this->request(Method::PUT, $endpoint, $data);
+    }
+    
+    /**
+     * @param string $endpoint
+     * 
+     * @return array
+     */
+    public function delete(string $endpoint): array
+    {
+        return $this->request(Method::DELETE, $endpoint);
+    }
+    
+    /**
+     * @param Method|string $method
      * @param string $endpoint
      * @param array $data = []
      * @param array $query = []
      * @param string $filepath = null
      * @param string $filename = null
-     *
+     * 
      * @return array
      */
     public function accountRequest(
-        string $method,
+        Method|string $method,
         string $endpoint,
         array $data = [],
         array $query = [],
@@ -226,27 +272,43 @@ class Client
             $accountEndpoint = "/API/Account/{$this->accountId}/$endpoint";
         }
         
+        dump($method);
+        
+        if (!$method instanceof Method) {
+            $method = Method::from($method);
+        }
+        
+        dump($method);
+        
         return $this->request($method, $accountEndpoint, $data, $query, $filepath, $filename);
     }
     
     /**
-     * @param string $method
+     * @param Method|string $method
      * @param string $endpoint
      * @param array $data = []
      * @param array $query = []
      * @param string $filepath = null
      * @param string $filename = null
-     *
+     * 
      * @return array
      */
     public function request(
-        string $method,
+        Method|string $method,
         string $endpoint,
         array $data = [],
         array $query = [],
         string $filepath = null,
         string $filename = null
     ): array {
+        
+        dump($method);
+        
+        if (!$method instanceof Method) {
+            $method = Method::from(Method);
+        }
+        
+        dump($method);
         
         $options = [];
         
@@ -304,7 +366,15 @@ class Client
                 'base_uri' => self::BASE_URL,
             ]);
             
-            $response = $guzzleClient->request($method, $endpoint, $options);
+            dump([
+                'method' => $method,
+                'endpoint' => self::BASE_URL . $endpoint,
+                'options' => $options
+                
+            ]);
+            exit;
+            
+            $response = $guzzleClient->request($method->value, $endpoint, $options);
             
             if ($response->hasHeader('X-LS-API-Bucket-Level')) {
                 
